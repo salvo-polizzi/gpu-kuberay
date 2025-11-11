@@ -1,0 +1,57 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: simple-ray-cluster
+spec:
+  rayVersion: "2.51.1"
+  
+  # Configure the head node
+  headGroupSpec:
+    serviceType: ClusterIP
+    # Ray start parameters for the head node (KubeRay handles the essential args)
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+      # FIX: Explicitly set object store memory to prevent ValueError (Exit Code 1)
+      # 1Gi is 1073741824 bytes, which is greater than the required minimum.
+      object-store-memory: "1073741824"
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.51.1
+            ports:
+              - containerPort: 6379 # GCS port
+                name: gcs
+              - containerPort: 8265 # Dashboard API port
+                name: dashboard
+              - containerPort: 10001 # Client connection port (Ray Client)
+                name: client
+            resources:
+              limits:
+                cpu: "1"
+                memory: "2Gi"
+              requests:
+                cpu: "1"
+                memory: "2Gi"
+
+  # Configure the worker group (using CPU resources)
+  workerGroupSpecs:
+    - groupName: small-worker-group
+      # Scaling configuration
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 1
+      # Ray start parameters for the worker node
+      rayStartParams: {} 
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.51.1
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: "2Gi"
+                requests:
+                  cpu: "1"
+                  memory: "2Gi"
