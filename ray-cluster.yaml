@@ -3,7 +3,7 @@ kind: RayCluster
 metadata:
   name: simple-ray-cluster
 spec:
-  rayVersion: "2.51.1"
+  rayVersion: "2.36.1"
   
   # Configure the head node
   headGroupSpec:
@@ -18,7 +18,7 @@ spec:
       spec:
         containers:
           - name: ray-head
-            image: rayproject/ray:2.51.1
+            image: rayproject/ray:2.36.1.999f76-py312-cpu
             ports:
               - containerPort: 6379 # GCS port
                 name: gcs
@@ -26,6 +26,9 @@ spec:
                 name: dashboard
               - containerPort: 10001 # Client connection port (Ray Client)
                 name: client
+            #volumeMounts:
+            #- name: shared-data
+            #  mountPath: "/shared"
             resources:
               limits:
                 cpu: "1"
@@ -33,6 +36,10 @@ spec:
               requests:
                 cpu: "1"
                 memory: "2Gi"
+        #volumes:
+        #  - name: shared-data
+        #    persistentVolumeClaim: 
+        #      claimName: ray-shared-pvc
 
   # Configure the worker group (using CPU resources)
   workerGroupSpecs:
@@ -47,7 +54,7 @@ spec:
         spec:
           containers:
             - name: ray-worker
-              image: rayproject/ray:2.51.1
+              image: rayproject/ray:2.36.1.999f76-py312-cpu
               resources:
                 limits:
                   cpu: "1"
@@ -55,3 +62,10 @@ spec:
                 requests:
                   cpu: "1"
                   memory: "2Gi"
+              #volumeMounts:
+              #- name: shared-data
+              #  mountPath: "/shared"
+          #volumes:
+          #- name: shared-data
+          #  persistentVolumeClaim: 
+          #    claimName: ray-shared-pvc
