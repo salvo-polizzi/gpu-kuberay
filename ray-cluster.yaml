@@ -3,69 +3,101 @@ kind: RayCluster
 metadata:
   name: simple-ray-cluster
 spec:
-  rayVersion: "2.36.1"
-  
-  # Configure the head node
+  # Use a stable Ray version (not nightly)
+  rayVersion: "2.31.0"
+
+  # -------------------------------------------------------------------
+  # HEAD NODE GROUP
+  # -------------------------------------------------------------------
   headGroupSpec:
-    serviceType: ClusterIP
-    # Ray start parameters for the head node (KubeRay handles the essential args)
+    serviceType: NodePort
     rayStartParams:
       dashboard-host: "0.0.0.0"
-      # FIX: Explicitly set object store memory to prevent ValueError (Exit Code 1)
-      # 1Gi is 1073741824 bytes, which is greater than the required minimum.
-      object-store-memory: "1073741824"
+      object-store-memory: "1073741824"  # 1GiB = safe for small clusters
     template:
       spec:
         containers:
           - name: ray-head
-            image: rayproject/ray:2.36.1.999f76-py312-cpu
+            # Stable, CPU-only, Py39 (best for local + PyTorch)
+            image: salvo324234/ray-enhanced:2.31.0
             ports:
-              - containerPort: 6379 # GCS port
+              - containerPort: 6379
                 name: gcs
-              - containerPort: 8265 # Dashboard API port
+              - containerPort: 8265
                 name: dashboard
-              - containerPort: 10001 # Client connection port (Ray Client)
+              - containerPort: 10001
                 name: client
-            #volumeMounts:
-            #- name: shared-data
-            #  mountPath: "/shared"
             resources:
-              limits:
-                cpu: "1"
-                memory: "2Gi"
               requests:
                 cpu: "1"
                 memory: "2Gi"
-        #volumes:
-        #  - name: shared-data
-        #    persistentVolumeClaim: 
-        #      claimName: ray-shared-pvc
+              limits:
+                cpu: "1"
+                memory: "2Gi"
 
-  # Configure the worker group (using CPU resources)
+  # -------------------------------------------------------------------
+  # DEFAULT CPU WORKER GROUP
+  # -------------------------------------------------------------------
   workerGroupSpecs:
-    - groupName: small-worker-group
-      # Scaling configuration
+    - groupName: cpu-workers
       replicas: 1
       minReplicas: 1
-      maxReplicas: 1
-      # Ray start parameters for the worker node
-      rayStartParams: {} 
+      maxReplicas: 2  # allow small local autoscaling
+      rayStartParams: {}
       template:
         spec:
           containers:
             - name: ray-worker
-              image: rayproject/ray:2.36.1.999f76-py312-cpu
+              image: salvo324234/ray-enhanced:2.31.0
               resources:
-                limits:
-                  cpu: "1"
-                  memory: "2Gi"
                 requests:
                   cpu: "1"
                   memory: "2Gi"
-              #volumeMounts:
-              #- name: shared-data
-              #  mountPath: "/shared"
-          #volumes:
-          #- name: shared-data
-          #  persistentVolumeClaim: 
-          #    claimName: ray-shared-pvc
+                limits:
+                  cpu: "1"
+                  memory: "2Gi"
+
+  # -------------------------------------------------------------------
+  # OPTIONAL FUTURE GPU WORKER GROUP (disabled by default)
+  # Uncomment + adjust when GPU nodes are available
+  # -------------------------------------------------------------------
+  # workerGroupSpecs:
+  #   - groupName: gpu-workers
+  #     replicas: 0
+  #     minReplicas: 0
+  #     maxReplicas: 4
+  #     rayStartParams:
+  #       num-gpus: "1"
+  #     template:
+  #       spec:
+  #         containers:
+  #         - name: ray-worker-gpu
+  #           image: rayproject/ray-ml:2.31.0-gpu
+  #           resources:
+  #             limits:
+  #               nvidia.com/gpu: 1
+  #               cpu: "4"
+  #               memory: "16Gi"
+  #             requests:
+  #               nvidia.com/gpu: 1
+  #               cpu: "4"
+  #               memory: "16Gi"
+---
+# -----------------------------------------------------------
+# NodePort service to expose the Ray Client port EXTERNALLY
+# -----------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-client-external
+spec:
+  type: NodePort
+  selector:
+    ray.io/node-type: head
+  ports:
+    - name: ray-client
+      protocol: TCP
+      port: 10001         # inside cluster
+      targetPort: 10001   # Ray head container
+      nodePort: 30001     # external port (choose any free port)
+

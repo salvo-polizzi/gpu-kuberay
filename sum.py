@@ -12,7 +12,7 @@ import time
 #
 # If running this script inside the cluster (e.g., in a debug pod), 
 # use the service name: ray://simple-ray-cluster-head-svc:10001
-RAY_HEAD_ADDRESS = "ray://localhost:10001" 
+RAY_HEAD_ADDRESS = "ray://172.29.5.95:30001" 
 
 def main():
     """Initializes Ray and executes a simple remote task."""

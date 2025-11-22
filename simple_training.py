@@ -12,7 +12,7 @@ import time
 # Then use: "ray://localhost:10001"
 # Inside the cluster, use the Ray service name:
 #   "ray://simple-ray-cluster-head-svc:10001"
-RAY_HEAD_ADDRESS = "ray://localhost:10001"
+RAY_HEAD_ADDRESS = "ray://172.29.5.95:30001"
 
 
 # --------------------------------------------------------------------
@@ -33,6 +33,10 @@ class SimpleNet(nn.Module):
 
 @ray.remote
 def train_worker(worker_id: int, epochs: int = 3, lr: float = 0.01):
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+
     """Each Ray task trains a simple model on random data."""
     print(f"[Worker {worker_id}] Starting training...")
     model = SimpleNet()
@@ -62,6 +66,16 @@ def train_worker(worker_id: int, epochs: int = 3, lr: float = 0.01):
 # --------------------------------------------------------------------
 def main():
     print(f"Connecting to Ray cluster at {RAY_HEAD_ADDRESS}...")
+
+    # Define runtime environment with required packages
+    runtime_env = {
+        "pip": [
+            "torch==2.2.2",
+            "pandas",
+            "numpy"
+        ]
+    }
+
     ray.init(address=RAY_HEAD_ADDRESS)
     print("Connected successfully!")
 
