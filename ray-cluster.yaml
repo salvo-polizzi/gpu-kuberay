@@ -4,7 +4,7 @@ metadata:
   name: simple-ray-cluster
 spec:
   # Use a stable Ray version (not nightly)
-  rayVersion: "2.31.0"
+  rayVersion: "2.52.0"
 
   # -------------------------------------------------------------------
   # HEAD NODE GROUP
@@ -18,8 +18,8 @@ spec:
       spec:
         containers:
           - name: ray-head
-            # Stable, CPU-only, Py39 (best for local + PyTorch)
-            image: salvo324234/ray-enhanced:2.31.0
+            # Stable, CPU-only, Py312 (best for local + PyTorch)
+            image: salvo324234/ray-enhanced:2.52.0
             ports:
               - containerPort: 6379
                 name: gcs
@@ -34,6 +34,13 @@ spec:
               limits:
                 cpu: "1"
                 memory: "2Gi"
+            volumeMounts:
+              - name: shared-data
+                mountPath: /shared
+        volumes:
+          - name: shared-data
+            persistentVolumeClaim: 
+              claimName: ray-shared-pvc
 
   # -------------------------------------------------------------------
   # DEFAULT CPU WORKER GROUP
@@ -48,7 +55,7 @@ spec:
         spec:
           containers:
             - name: ray-worker
-              image: salvo324234/ray-enhanced:2.31.0
+              image: salvo324234/ray-enhanced:2.52.0
               resources:
                 requests:
                   cpu: "1"
@@ -56,7 +63,13 @@ spec:
                 limits:
                   cpu: "1"
                   memory: "2Gi"
-
+              volumeMounts:
+              - name: shared-data
+                mountPath: /shared
+          volumes:
+            - name: shared-data
+              persistentVolumeClaim: 
+                claimName: ray-shared-pvc
   # -------------------------------------------------------------------
   # OPTIONAL FUTURE GPU WORKER GROUP (disabled by default)
   # Uncomment + adjust when GPU nodes are available
