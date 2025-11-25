@@ -1,0 +1,61 @@
+# nfs-server.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfs-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server
+  namespace: nfs-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      containers:
+      - name: nfs-server
+        image: itsthenetwork/nfs-server-alpine:latest
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 2049
+        - containerPort: 20048
+        - containerPort: 111
+        env:
+        - name: SHARED_DIRECTORY
+          value: "/exports"
+        volumeMounts:
+        - name: nfs-storage
+          mountPath: /exports
+      volumes:
+      - name: nfs-storage
+        hostPath:
+          path: /mnt/nfs-data
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server
+  namespace: nfs-system
+spec:
+  selector:
+    app: nfs-server
+  ports:
+  - name: nfs
+    port: 2049
+    targetPort: 2049
+  - name: mountd
+    port: 20048
+    targetPort: 20048
+  - name: rpcbind
+    port: 111
+    targetPort: 111
+  type: ClusterIP
