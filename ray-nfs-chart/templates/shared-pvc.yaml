@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.sharedPvc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ray-nfs-chart.labels" . | nindent 4 }}
+spec:
+  accessModes:
+{{- range .Values.sharedPvc.accessModes }}
+    - {{ . }}
+{{- end }}
+  storageClassName: {{ .Values.nfs.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedPvc.size }}

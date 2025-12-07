@@ -1,0 +1,21 @@
+{{- if .Values.rayCluster.enabled }}
+{{- $clusterName := ( .Values.rayCluster.nameOverride | default (include "ray-nfs-chart.fullname" .) ) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $clusterName }}-ray-client
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ray-nfs-chart.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    ray.io/node-type: head
+    ray.io/cluster: {{ $clusterName }}
+  ports:
+    - name: ray-client
+      protocol: TCP
+      port: 10001
+      targetPort: 10001
+      nodePort: {{ .Values.rayCluster.head.nodePort }}
+{{- end }}

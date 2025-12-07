@@ -1,0 +1,74 @@
+# NFS server + static PV
+nfs:
+  namespace: nfs-system
+  replicas: 1
+
+  image: itsthenetwork/nfs-server-alpine:latest
+  imagePullPolicy: IfNotPresent
+
+  # Path inside the container that is exported
+  # If fsid is set to 0, then the exported path by the clients must be /
+  exportPathServer: /exports
+  exportPathClient: /
+
+  # HostPath on the node (Minikube VM) backing the export
+  # using a docker volume created for testing within Minikube
+  hostPath: /var/lib/docker/volumes/nfsdata/_data
+
+  # StorageClass + PersistentVolume
+  storageClass: nfs-direct
+  pvName: ray-shared-nfs-pv
+  pvSize: 10Gi # Change this based on necessities
+
+  ##### WORKAROUND #######
+  # Using a specific cluster IP to avoid dns service issues 
+  clusterIP: 10.96.0.2
+
+# PVC used by RayCluster (binds to the static PV via storageClassName)
+sharedPvc:
+  name: ray-shared-pvc
+  size: 10Gi
+  accessModes:
+    - ReadWriteMany
+
+# RayCluster configuration
+rayCluster:
+  enabled: true
+  # Name of the RayCluster CR. If empty, chart fullname is used.
+  nameOverride: simple-ray-cluster
+
+  rayVersion: "2.52.0"
+  image: "rayproject/ray:2.52.0-py312"
+
+  sharedStorage:
+    mountPath: /mnt/shared
+
+  head:
+    serviceType: NodePort
+    nodePort: 30001
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+
+  worker:
+    replicas: 1
+    minReplicas: 1
+    maxReplicas: 3
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+
+  # Ray start parameters for head and workers
+  rayStartParams:
+    head:
+      dashboard-host: "0.0.0.0"
+      object-store-memory: "1073741824"  # 1GiB
+    worker: {}

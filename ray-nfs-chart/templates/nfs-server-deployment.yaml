@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server
+  namespace: {{ .Values.nfs.namespace }}
+  labels:
+    app: nfs-server
+spec:
+  replicas: {{ .Values.nfs.replicas }}
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      containers:
+      - name: nfs-server
+        image: {{ .Values.nfs.image }}
+        imagePullPolicy: {{ .Values.nfs.imagePullPolicy }}
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 2049
+          name: nfs
+        - containerPort: 20048
+          name: mountd
+        - containerPort: 111
+          name: rpcbind
+        env:
+        - name: SHARED_DIRECTORY
+          value: "{{ .Values.nfs.exportPathServer }}"
+        volumeMounts:
+        - name: nfs-storage
+          mountPath: {{ .Values.nfs.exportPathServer }}
+      volumes:
+      - name: nfs-storage
+        hostPath:
+          path: {{ .Values.nfs.hostPath }}
+          type: Directory
+

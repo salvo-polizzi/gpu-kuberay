@@ -1,0 +1,73 @@
+{{- if .Values.rayCluster.enabled }}
+{{- $clusterName := ( .Values.rayCluster.nameOverride | default (include "ray-nfs-chart.fullname" .) ) }}
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: {{ $clusterName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ray-nfs-chart.labels" . | nindent 4 }}
+spec:
+  rayVersion: {{ .Values.rayCluster.rayVersion | quote }}
+
+  headGroupSpec:
+    serviceType: {{ .Values.rayCluster.head.serviceType }}
+{{- with .Values.rayCluster.rayStartParams.head }}
+    rayStartParams:
+{{- range $k, $v := . }}
+      {{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- end }}
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: {{ .Values.rayCluster.image }}
+            imagePullPolicy: IfNotPresent
+            resources:
+{{- toYaml .Values.rayCluster.head.resources | nindent 14 }}
+            ports:
+              - containerPort: 6379
+                name: gcs
+                protocol: TCP
+              - containerPort: 8265
+                name: dashboard
+                protocol: TCP
+              - containerPort: 10001
+                name: client
+                protocol: TCP
+            volumeMounts:
+              - name: shared-storage
+                mountPath: {{ .Values.rayCluster.sharedStorage.mountPath }}
+        volumes:
+          - name: shared-storage
+            persistentVolumeClaim:
+              claimName: {{ .Values.sharedPvc.name }}
+
+  workerGroupSpecs:
+    - groupName: worker-group
+      replicas: {{ .Values.rayCluster.worker.replicas }}
+      minReplicas: {{ .Values.rayCluster.worker.minReplicas }}
+      maxReplicas: {{ .Values.rayCluster.worker.maxReplicas }}
+{{- with .Values.rayCluster.rayStartParams.worker }}
+      rayStartParams:
+{{- range $k, $v := . }}
+        {{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- end }}
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: {{ .Values.rayCluster.image }}
+              imagePullPolicy: IfNotPresent
+              resources:
+{{- toYaml .Values.rayCluster.worker.resources | nindent 16 }}
+              volumeMounts:
+                - name: shared-storage
+                  mountPath: {{ .Values.rayCluster.sharedStorage.mountPath }}
+          volumes:
+            - name: shared-storage
+              persistentVolumeClaim:
+                claimName: {{ .Values.sharedPvc.name }}
+{{- end }}
