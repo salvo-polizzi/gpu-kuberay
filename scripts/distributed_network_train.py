@@ -110,7 +110,7 @@ def get_job_status(futures: List, job_name: str) -> Tuple[List, List]:
     return ready_futures, pending_futures
 
 
-@ray.remote(num_gpus=1)
+@ray.remote
 def train_model_task(training_config: Dict[str, Any]) -> Dict[str, Any]:
     """Train the neural network on GPU with given configuration."""
     import torch
@@ -281,7 +281,7 @@ def train_model_task(training_config: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
-@ray.remote(num_gpus=1)
+@ray.remote
 def save_model_to_shared_storage(model_state_dict, model_path: str) -> Dict[str, Any]:
     """Save trained model to shared NFS storage."""
     import torch
@@ -396,7 +396,7 @@ def connect_to_ray_cluster(ray_address: str):
     # Define runtime environment with required packages
     runtime_env = {
         "pip": [
-            "torch==2.4.1",
+            "torch==2.2.2",
             "pandas", 
             "numpy"
         ]
@@ -647,10 +647,10 @@ def main():
     """Main function to run distributed neural network training."""
     parser = argparse.ArgumentParser(description='Distributed Neural Network Training with Ray')
     parser.add_argument('--ray-address', 
-                       default='ray://192.168.17.93:30002',
-                       help='Ray cluster address (default: ray://192.168.17.93:30002)')
+                       default='ray://localhost:10001',
+                       help='Ray cluster address (default: ray://localhost:10001')
     parser.add_argument('--shared-storage-path', 
-                       default='/shared/models',
+                       default='/mnt/shared/models',
                        help='Path to shared storage for model persistence (default: /shared/models)')
     
     args = parser.parse_args()

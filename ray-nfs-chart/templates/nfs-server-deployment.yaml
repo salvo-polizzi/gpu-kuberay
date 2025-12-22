@@ -38,5 +38,5 @@ spec:
       - name: nfs-storage
         hostPath:
           path: {{ .Values.nfs.hostPath }}
-          type: Directory
+          type: DirectoryOrCreate
 

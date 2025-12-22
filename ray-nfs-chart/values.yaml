@@ -12,8 +12,7 @@ nfs:
   exportPathClient: /
 
   # HostPath on the node (Minikube VM) backing the export
-  # using a docker volume created for testing within Minikube
-  hostPath: /var/lib/docker/volumes/nfsdata/_data
+  hostPath: /mnt/nfs-data
 
   # StorageClass + PersistentVolume
   storageClass: nfs-direct
@@ -57,14 +56,14 @@ rayCluster:
   worker:
     replicas: 1
     minReplicas: 1
-    maxReplicas: 3
+    maxReplicas: 2
     resources:
       requests:
         cpu: "1"
         memory: "2Gi"
       limits:
-        cpu: "2"
-        memory: "4Gi"
+        cpu: "1.5"
+        memory: "2Gi"
 
   # Ray start parameters for head and workers
   rayStartParams:

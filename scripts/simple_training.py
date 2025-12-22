@@ -12,7 +12,7 @@ import time
 # Then use: "ray://localhost:10001"
 # Inside the cluster, use the Ray service name:
 #   "ray://simple-ray-cluster-head-svc:10001"
-RAY_HEAD_ADDRESS = "ray://172.29.5.95:30001"
+RAY_HEAD_ADDRESS = "ray://localhost:10001"
 
 
 # --------------------------------------------------------------------
@@ -76,7 +76,7 @@ def main():
         ]
     }
 
-    ray.init(address=RAY_HEAD_ADDRESS)
+    ray.init(address=RAY_HEAD_ADDRESS, runtime_env=runtime_env)
     print("Connected successfully!")
 
     # Launch 2 remote training tasks
