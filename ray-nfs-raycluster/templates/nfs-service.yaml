@@ -7,6 +7,7 @@ metadata:
 spec:
   selector:
     app: {{ .Values.nfs.server.name | quote }}
+  clusterIP: {{ .Values.nfs.server.service.clusterIP }}
   ports:
 {{- range .Values.nfs.server.service.ports }}
   - name: {{ .name | quote }}

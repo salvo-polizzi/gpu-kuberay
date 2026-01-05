@@ -17,6 +17,7 @@ nfs:
       privileged: true
     service:
       type: ClusterIP
+      clusterIP: 10.43.116.162 
       ports:
       - name: nfs
         port: 2049
@@ -43,7 +44,7 @@ nfs:
     - retrans=2
     - hard
     nfs:
-      server: 10.43.160.111
+      server: 10.43.116.162
       path: /
 sharedPvc:
   create: true
