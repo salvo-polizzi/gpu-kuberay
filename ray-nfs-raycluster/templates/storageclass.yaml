@@ -1,0 +1,9 @@
+{{- if .Values.nfs.enabled }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.nfs.storageClass.name | quote }}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: {{ .Values.nfs.storageClass.volumeBindingMode | quote }}
+reclaimPolicy: {{ .Values.nfs.storageClass.reclaimPolicy | quote }}
+{{- end }}

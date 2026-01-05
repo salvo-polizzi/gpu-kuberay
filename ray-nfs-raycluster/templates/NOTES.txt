@@ -1,0 +1,9 @@
+RayCluster deployed.
+
+If headService.enabled=true (NodePort), you can access:
+- Ray Client:   <NodeIP>:{{ (index .Values.headService.ports 0).nodePort }}
+- Dashboard:    <NodeIP>:{{ (index .Values.headService.ports 1).nodePort }}
+
+Shared storage:
+- PVC: {{ .Values.sharedPvc.name }}
+- Mount path in pods: {{ .Values.rayCluster.sharedMountPath }}

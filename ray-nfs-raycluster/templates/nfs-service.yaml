@@ -1,0 +1,17 @@
+{{- if .Values.nfs.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.nfs.server.name | quote }}
+  namespace: {{ .Values.nfs.namespace.name | quote }}
+spec:
+  selector:
+    app: {{ .Values.nfs.server.name | quote }}
+  ports:
+{{- range .Values.nfs.server.service.ports }}
+  - name: {{ .name | quote }}
+    port: {{ .port }}
+    targetPort: {{ .targetPort }}
+{{- end }}
+  type: {{ .Values.nfs.server.service.type }}
+{{- end }}
