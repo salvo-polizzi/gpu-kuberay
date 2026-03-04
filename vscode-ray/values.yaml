@@ -1,0 +1,60 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: salvo324234/vscode-ray-client
+  tag: 1.0.1
+  pullPolicy: IfNotPresent
+
+podAnnotations: {}
+podLabels: {}
+
+service:
+  type: NodePort
+  port: 8080
+  targetPort: http
+  nodePort: 30080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: vscode-ray.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+
+ray:
+  address: ray://ray-cluster-head-svc:10001
+  sharedStoragePath: /shared/models
+
+sharedStorage:
+  enabled: true
+  existingClaim: ray-shared-pvc
+  mountPath: /shared
+
+env: []
+nodeSelector: {}
+tolerations: []
+affinity: {}

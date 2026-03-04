@@ -1,0 +1,21 @@
+VS Code server deployed.
+
+Service:
+- Name: {{ include "vscode-ray.fullname" . }}
+- Type: {{ .Values.service.type }}
+- Port: {{ .Values.service.port }}
+{{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+- NodePort: {{ .Values.service.nodePort }}
+{{- end }}
+
+Ray connection:
+- RAY_ADDRESS={{ .Values.ray.address }}
+- SHARED_STORAGE_PATH={{ .Values.ray.sharedStoragePath }}
+
+Shared storage:
+{{- if .Values.sharedStorage.enabled }}
+- PVC: {{ .Values.sharedStorage.existingClaim }}
+- Mounted at: {{ .Values.sharedStorage.mountPath }}
+{{- else }}
+- Disabled
+{{- end }}
