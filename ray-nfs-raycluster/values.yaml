@@ -117,9 +117,9 @@ rayCluster:
     gpuGroup:
       enabled: true
       groupName: gpu-group
-      minReplicas: 1
-      maxReplicas: 4
-      replicas: 0
+      minReplicas: 0
+      maxReplicas: 1
+      replicas: 1
       image: rayproject/ray:2.47.1.aeaf41-py311-gpu
       name: ray-node
       resources:
