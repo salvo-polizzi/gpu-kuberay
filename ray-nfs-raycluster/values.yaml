@@ -102,8 +102,8 @@ rayCluster:
       enabled: true
       groupName: cpu-group
       minReplicas: 1
-      maxReplicas: 5
-      replicas: 0
+      maxReplicas: 2
+      replicas: 1
       image: rayproject/ray:2.47.1.aeaf41-py311-cpu
       name: ray-worker
       resources:
