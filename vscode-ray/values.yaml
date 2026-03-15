@@ -77,6 +77,7 @@ rayCluster:
         - -c
       args: |
         mkdir -p /shared/models /shared/datasets /shared/uploads /shared/checkpoints
+        mkdir -p /home/custom-storage
         chmod -R 0777 /shared
     ports:
       - containerPort: 6379
@@ -150,7 +151,7 @@ env: []
 #extraVolumes: []
 extraVolumes:
   - name: custom-storage
-    mountPath: /mnt
+    mountPath: /home/custom-storage
     claimName: custom-pvc
     readOnly: false
     subPath: ""
