@@ -1,0 +1,31 @@
+nameOverride: ""
+fullnameOverride: ""
+
+nfs:
+  enabled: true
+  namespace:
+    create: true
+    name: nfs-system
+  server:
+    name: nfs-server
+    replicas: 1
+    image: itsthenetwork/nfs-server-alpine:latest
+    sharedDirectory: /exports
+    hostPath:
+      path: /mnt/nfs-data
+      type: DirectoryOrCreate
+    securityContext:
+      privileged: true
+    service:
+      type: ClusterIP
+      clusterIP: 10.43.116.162
+      ports:
+        - name: nfs
+          port: 2049
+          targetPort: 2049
+        - name: mountd
+          port: 20048
+          targetPort: 20048
+        - name: rpcbind
+          port: 111
+          targetPort: 111

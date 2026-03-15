@@ -5,7 +5,7 @@ metadata:
   labels:
 {{ include "vscode-ray.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
 {{ include "vscode-ray.selectorLabels" . | nindent 6 }}
@@ -25,17 +25,19 @@ spec:
 {{ toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: code-server
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.workspace.image.repository }}:{{ .Values.workspace.image.tag }}"
+          imagePullPolicy: {{ .Values.workspace.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.workspace.port }}
               protocol: TCP
           env:
-            - name: RAY_ADDRESS
-              value: {{ .Values.ray.address | quote }}
-            - name: SHARED_STORAGE_PATH
-              value: {{ .Values.ray.sharedStoragePath | quote }}
+            - name: {{ .Values.ray.addressEnvName }}
+              value: {{ printf "ray://%s:10001" (include "vscode-ray.rayHeadServiceName" .) | quote }}
+            - name: {{ .Values.ray.sharedStoragePathEnvName }}
+              value: {{ .Values.ray.sharedStoragePathValue | quote }}
+            - name: WORKSPACE_PVC_NAME
+              value: {{ include "vscode-ray.pvcName" . | quote }}
 {{- with .Values.env }}
 {{ toYaml . | nindent 12 }}
 {{- end }}
@@ -53,17 +55,13 @@ spec:
             periodSeconds: 20
           resources:
 {{ toYaml .Values.resources | nindent 12 }}
-{{- if .Values.sharedStorage.enabled }}
           volumeMounts:
             - name: shared-storage
               mountPath: {{ .Values.sharedStorage.mountPath | quote }}
-{{- end }}
-{{- if .Values.sharedStorage.enabled }}
       volumes:
         - name: shared-storage
           persistentVolumeClaim:
-            claimName: {{ .Values.sharedStorage.existingClaim | quote }}
-{{- end }}
+            claimName: {{ include "vscode-ray.pvcName" . | quote }}
 {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | nindent 8 }}

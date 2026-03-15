@@ -31,3 +31,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/name: {{ include "vscode-ray.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{- define "vscode-ray.pvcName" -}}
+{{- printf "%s-shared" (include "vscode-ray.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "vscode-ray.rayClusterName" -}}
+{{- printf "%s-raycluster" (include "vscode-ray.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "vscode-ray.rayHeadServiceName" -}}
+{{- printf "%s-head-svc" (include "vscode-ray.rayClusterName" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}

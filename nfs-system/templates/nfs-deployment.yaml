@@ -1,0 +1,38 @@
+{{- if .Values.nfs.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.nfs.server.name | quote }}
+  namespace: {{ .Values.nfs.namespace.name | quote }}
+spec:
+  replicas: {{ .Values.nfs.server.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.nfs.server.name | quote }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.nfs.server.name | quote }}
+    spec:
+      containers:
+        - name: nfs-server
+          image: {{ .Values.nfs.server.image | quote }}
+          ports:
+{{- range .Values.nfs.server.service.ports }}
+            - containerPort: {{ .targetPort }}
+              name: {{ .name | quote }}
+{{- end }}
+          securityContext:
+            privileged: {{ .Values.nfs.server.securityContext.privileged }}
+          env:
+            - name: SHARED_DIRECTORY
+              value: {{ .Values.nfs.server.sharedDirectory | quote }}
+          volumeMounts:
+            - name: nfs-storage
+              mountPath: {{ .Values.nfs.server.sharedDirectory | quote }}
+      volumes:
+        - name: nfs-storage
+          hostPath:
+            path: {{ .Values.nfs.server.hostPath.path | quote }}
+            type: {{ .Values.nfs.server.hostPath.type | quote }}
+{{- end }}

@@ -1,0 +1,10 @@
+NFS system deployed.
+
+Service:
+- Namespace: {{ .Values.nfs.namespace.name }}
+- Name: {{ .Values.nfs.server.name }}
+- ClusterIP: {{ .Values.nfs.server.service.clusterIP }}
+
+Host storage:
+- Path: {{ .Values.nfs.server.hostPath.path }}
+- Exported directory in container: {{ .Values.nfs.server.sharedDirectory }}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: nfs-system
+description: Deploy the in-cluster NFS server used by workspace PVCs.
+type: application
+version: 0.1.0
+appVersion: "latest"

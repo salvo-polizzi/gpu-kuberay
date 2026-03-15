@@ -1,12 +1,12 @@
 nameOverride: ""
 fullnameOverride: ""
 
-replicaCount: 1
-
-image:
-  repository: salvo324234/vscode-ray-client
-  tag: 1.0.1
-  pullPolicy: IfNotPresent
+workspace:
+  image:
+    repository: salvo324234/vscode-ray-client
+    tag: 1.0.1
+    pullPolicy: IfNotPresent
+  port: 8080
 
 podAnnotations: {}
 podLabels: {}
@@ -45,14 +45,98 @@ securityContext:
   runAsGroup: 1000
   runAsNonRoot: true
 
-ray:
-  address: ray://ray-cluster-head-svc:10001
-  sharedStoragePath: /shared/models
-
 sharedStorage:
-  enabled: true
-  existingClaim: ray-shared-pvc
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteMany
+  size: 20Gi
   mountPath: /shared
+
+ray:
+  addressEnvName: RAY_ADDRESS
+  sharedStoragePathEnvName: SHARED_STORAGE_PATH
+  sharedStoragePathValue: /shared/models
+
+rayCluster:
+  apiVersion: ray.io/v1
+  rayVersion: 2.47.1
+  enableInTreeAutoscaling: true
+  head:
+    image:
+      repository: rayproject/ray
+      tag: 2.47.1.aeaf41-py311-cpu
+      pullPolicy: IfNotPresent
+    rayStartParams:
+      num-cpus: "0"
+    initSharedStorage:
+      enabled: true
+      image: busybox
+      runAsUser: 0
+      command:
+        - sh
+        - -c
+      args: |
+        mkdir -p /shared/models /shared/datasets /shared/uploads /shared/checkpoints
+        chmod -R 0777 /shared
+    ports:
+      - containerPort: 6379
+        name: gcs
+        protocol: TCP
+      - containerPort: 8265
+        name: dashboard
+        protocol: TCP
+      - containerPort: 10001
+        name: client
+        protocol: TCP
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        cpu: "1"
+        memory: 4Gi
+  workers:
+    cpuGroup:
+      enabled: true
+      groupName: cpu-group
+      name: ray-worker
+      replicas: 0
+      minReplicas: 1
+      maxReplicas: 2
+      image:
+        repository: rayproject/ray
+        tag: 2.47.1.aeaf41-py311-cpu
+        pullPolicy: IfNotPresent
+      rayStartParams: {}
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "1"
+          memory: 8Gi
+    gpuGroup:
+      enabled: true
+      groupName: gpu-group
+      name: ray-node
+      replicas: 1
+      minReplicas: 0
+      maxReplicas: 1
+      image:
+        repository: rayproject/ray
+        tag: 2.47.1.aeaf41-py311-gpu
+        pullPolicy: IfNotPresent
+      rayStartParams: {}
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+          nvidia.com/gpu: 1
+        limits:
+          cpu: "1"
+          memory: 8Gi
+          nvidia.com/gpu: 1
+      runtimeClassName: nvidia
 
 env: []
 nodeSelector: {}

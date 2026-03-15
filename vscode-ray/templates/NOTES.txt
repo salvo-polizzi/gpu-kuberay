@@ -1,7 +1,14 @@
-VS Code server deployed.
+VS Code workspace deployed.
 
-Service:
-- Name: {{ include "vscode-ray.fullname" . }}
+Workspace:
+- Deployment: {{ include "vscode-ray.fullname" . }}
+- PVC: {{ include "vscode-ray.pvcName" . }}
+- RayCluster: {{ include "vscode-ray.rayClusterName" . }}
+- Ray head service: {{ include "vscode-ray.rayHeadServiceName" . }}
+- Shared mount path: {{ .Values.sharedStorage.mountPath }}
+
+Access:
+- Service: {{ include "vscode-ray.fullname" . }}
 - Type: {{ .Values.service.type }}
 - Port: {{ .Values.service.port }}
 {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
@@ -9,13 +16,12 @@ Service:
 {{- end }}
 
 Ray connection:
-- RAY_ADDRESS={{ .Values.ray.address }}
-- SHARED_STORAGE_PATH={{ .Values.ray.sharedStoragePath }}
+- {{ .Values.ray.addressEnvName }}=ray://{{ include "vscode-ray.rayHeadServiceName" . }}:10001
+- {{ .Values.ray.sharedStoragePathEnvName }}={{ .Values.ray.sharedStoragePathValue }}
 
 Shared storage:
-{{- if .Values.sharedStorage.enabled }}
-- PVC: {{ .Values.sharedStorage.existingClaim }}
-- Mounted at: {{ .Values.sharedStorage.mountPath }}
-{{- else }}
-- Disabled
-{{- end }}
+- StorageClass: {{ .Values.sharedStorage.storageClassName }}
+- Size: {{ .Values.sharedStorage.size }}
+
+Image note:
+- If user scripts import local project modules beyond a single file, consider using the same custom image for the Ray head/workers as the VS Code workspace.

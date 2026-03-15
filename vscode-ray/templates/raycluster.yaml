@@ -1,0 +1,93 @@
+apiVersion: {{ .Values.rayCluster.apiVersion }}
+kind: RayCluster
+metadata:
+  name: {{ include "vscode-ray.rayClusterName" . }}
+  labels:
+{{ include "vscode-ray.labels" . | nindent 4 }}
+spec:
+  enableInTreeAutoscaling: {{ .Values.rayCluster.enableInTreeAutoscaling }}
+  rayVersion: {{ .Values.rayCluster.rayVersion | quote }}
+  headGroupSpec:
+    rayStartParams:
+{{- toYaml .Values.rayCluster.head.rayStartParams | nindent 6 }}
+    template:
+      spec:
+{{- if .Values.rayCluster.head.initSharedStorage.enabled }}
+        initContainers:
+          - name: init-shared-storage
+            image: {{ .Values.rayCluster.head.initSharedStorage.image | quote }}
+            securityContext:
+              runAsUser: {{ .Values.rayCluster.head.initSharedStorage.runAsUser }}
+            command:
+{{- toYaml .Values.rayCluster.head.initSharedStorage.command | nindent 14 }}
+            args:
+              - {{ .Values.rayCluster.head.initSharedStorage.args | quote }}
+            volumeMounts:
+              - name: shared-data
+                mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- end }}
+        containers:
+          - name: ray-head
+            image: "{{ .Values.rayCluster.head.image.repository }}:{{ .Values.rayCluster.head.image.tag }}"
+            imagePullPolicy: {{ .Values.rayCluster.head.image.pullPolicy }}
+            ports:
+{{- toYaml .Values.rayCluster.head.ports | nindent 14 }}
+            resources:
+{{- toYaml .Values.rayCluster.head.resources | nindent 14 }}
+            volumeMounts:
+              - name: shared-data
+                mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+        volumes:
+          - name: shared-data
+            persistentVolumeClaim:
+              claimName: {{ include "vscode-ray.pvcName" . | quote }}
+  workerGroupSpecs:
+{{- if .Values.rayCluster.workers.cpuGroup.enabled }}
+    - groupName: {{ .Values.rayCluster.workers.cpuGroup.groupName | quote }}
+      replicas: {{ .Values.rayCluster.workers.cpuGroup.replicas }}
+      minReplicas: {{ .Values.rayCluster.workers.cpuGroup.minReplicas }}
+      maxReplicas: {{ .Values.rayCluster.workers.cpuGroup.maxReplicas }}
+      rayStartParams:
+{{- toYaml .Values.rayCluster.workers.cpuGroup.rayStartParams | nindent 8 }}
+      template:
+        spec:
+          containers:
+            - name: {{ .Values.rayCluster.workers.cpuGroup.name | quote }}
+              image: "{{ .Values.rayCluster.workers.cpuGroup.image.repository }}:{{ .Values.rayCluster.workers.cpuGroup.image.tag }}"
+              imagePullPolicy: {{ .Values.rayCluster.workers.cpuGroup.image.pullPolicy }}
+              resources:
+{{- toYaml .Values.rayCluster.workers.cpuGroup.resources | nindent 16 }}
+              volumeMounts:
+                - name: shared-data
+                  mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+          volumes:
+            - name: shared-data
+              persistentVolumeClaim:
+                claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- end }}
+{{- if .Values.rayCluster.workers.gpuGroup.enabled }}
+    - groupName: {{ .Values.rayCluster.workers.gpuGroup.groupName | quote }}
+      replicas: {{ .Values.rayCluster.workers.gpuGroup.replicas }}
+      minReplicas: {{ .Values.rayCluster.workers.gpuGroup.minReplicas }}
+      maxReplicas: {{ .Values.rayCluster.workers.gpuGroup.maxReplicas }}
+      rayStartParams:
+{{- toYaml .Values.rayCluster.workers.gpuGroup.rayStartParams | nindent 8 }}
+      template:
+        spec:
+{{- if .Values.rayCluster.workers.gpuGroup.runtimeClassName }}
+          runtimeClassName: {{ .Values.rayCluster.workers.gpuGroup.runtimeClassName | quote }}
+{{- end }}
+          containers:
+            - name: {{ .Values.rayCluster.workers.gpuGroup.name | quote }}
+              image: "{{ .Values.rayCluster.workers.gpuGroup.image.repository }}:{{ .Values.rayCluster.workers.gpuGroup.image.tag }}"
+              imagePullPolicy: {{ .Values.rayCluster.workers.gpuGroup.image.pullPolicy }}
+              resources:
+{{- toYaml .Values.rayCluster.workers.gpuGroup.resources | nindent 16 }}
+              volumeMounts:
+                - name: shared-data
+                  mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+          volumes:
+            - name: shared-data
+              persistentVolumeClaim:
+                claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- end }}
