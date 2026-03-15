@@ -25,6 +25,16 @@ spec:
             volumeMounts:
               - name: shared-data
                 mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+              - name: {{ .name | quote }}
+                mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
 {{- end }}
         containers:
           - name: ray-head
@@ -37,10 +47,28 @@ spec:
             volumeMounts:
               - name: shared-data
                 mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+              - name: {{ .name | quote }}
+                mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
         volumes:
           - name: shared-data
             persistentVolumeClaim:
               claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- range .Values.extraVolumes }}
+          - name: {{ .name | quote }}
+            persistentVolumeClaim:
+              claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+              readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
   workerGroupSpecs:
 {{- if .Values.rayCluster.workers.cpuGroup.enabled }}
     - groupName: {{ .Values.rayCluster.workers.cpuGroup.groupName | quote }}
@@ -60,10 +88,28 @@ spec:
               volumeMounts:
                 - name: shared-data
                   mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                - name: {{ .name | quote }}
+                  mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                  subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                  readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
           volumes:
             - name: shared-data
               persistentVolumeClaim:
                 claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- range .Values.extraVolumes }}
+            - name: {{ .name | quote }}
+              persistentVolumeClaim:
+                claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- if .Values.rayCluster.workers.gpuGroup.enabled }}
     - groupName: {{ .Values.rayCluster.workers.gpuGroup.groupName | quote }}
@@ -86,8 +132,26 @@ spec:
               volumeMounts:
                 - name: shared-data
                   mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                - name: {{ .name | quote }}
+                  mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                  subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                  readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
           volumes:
             - name: shared-data
               persistentVolumeClaim:
                 claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- range .Values.extraVolumes }}
+            - name: {{ .name | quote }}
+              persistentVolumeClaim:
+                claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
 {{- end }}

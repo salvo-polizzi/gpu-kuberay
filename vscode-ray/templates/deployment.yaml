@@ -58,10 +58,28 @@ spec:
           volumeMounts:
             - name: shared-storage
               mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+            - name: {{ .name | quote }}
+              mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+              subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+              readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
       volumes:
         - name: shared-storage
           persistentVolumeClaim:
             claimName: {{ include "vscode-ray.pvcName" . | quote }}
+{{- range .Values.extraVolumes }}
+        - name: {{ .name | quote }}
+          persistentVolumeClaim:
+            claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+            readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
 {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | nindent 8 }}

@@ -100,7 +100,7 @@ rayCluster:
       enabled: true
       groupName: cpu-group
       name: ray-worker
-      replicas: 0
+      replicas: 1
       minReplicas: 1
       maxReplicas: 2
       image:
@@ -120,7 +120,7 @@ rayCluster:
       groupName: gpu-group
       name: ray-node
       replicas: 1
-      minReplicas: 0
+      minReplicas: 1
       maxReplicas: 1
       image:
         repository: rayproject/ray
@@ -139,6 +139,15 @@ rayCluster:
       runtimeClassName: nvidia
 
 env: []
+# Extra PVC-backed mounts for the VS Code pod and Ray head/workers.
+# Example:
+# extraVolumes:
+#   - name: datasets
+#     mountPath: /data
+#     claimName: datasets-pvc
+#     readOnly: true
+#     subPath: ""
+extraVolumes: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
