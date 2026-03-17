@@ -19,8 +19,8 @@ service:
   annotations: {}
 
 ingress:
-  enabled: false
-  className: ""
+  enabled: true
+  className: traefik
   annotations: {}
   hosts:
     - host: vscode-ray.local
