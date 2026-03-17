@@ -132,7 +132,7 @@ rayCluster:
         requests:
           cpu: "1"
           memory: 1Gi
-          nvidia.com/gpu: 1
+          nvidia.com/gpu: 0.5
         limits:
           cpu: "1"
           memory: 8Gi
