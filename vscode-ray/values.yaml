@@ -15,11 +15,11 @@ service:
   type: NodePort
   port: 8080
   targetPort: http
-  nodePort: 30080
+  #nodePort: 30080
   annotations: {}
 
 ingress:
-  enabled: true
+  enabled: false
   className: traefik
   annotations: {}
   hosts:
