@@ -111,7 +111,7 @@ rayCluster:
       rayStartParams: {}
       resources:
         requests:
-          cpu: "1"
+          cpu: "500m"
           memory: 1Gi
         limits:
           cpu: "1"
@@ -130,7 +130,7 @@ rayCluster:
       rayStartParams: {}
       resources:
         requests:
-          cpu: "1"
+          cpu: "500m"
           memory: 1Gi
           nvidia.com/gpu: 1
         limits:
