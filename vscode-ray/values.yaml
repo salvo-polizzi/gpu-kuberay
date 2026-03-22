@@ -148,13 +148,13 @@ env: []
 #     claimName: datasets-pvc
 #     readOnly: true
 #     subPath: ""
-#extraVolumes: []
-extraVolumes:   
-  - name: custom-storage
-    mountPath: /home/custom-storage
-    claimName: custom-pvc
-    readOnly: false
-    subPath: ""
+extraVolumes: []
+#extraVolumes:   
+#  - name: custom-storage
+#    mountPath: /home/custom-storage
+#    claimName: custom-pvc
+#    readOnly: false
+#    subPath: ""
 nodeSelector: {}
 tolerations: []
 affinity: {}
