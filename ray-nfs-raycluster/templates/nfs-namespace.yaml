@@ -1,6 +1,0 @@
-{{- if and .Values.nfs.enabled .Values.nfs.namespace.create }}
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ .Values.nfs.namespace.name | quote }}
-{{- end }}

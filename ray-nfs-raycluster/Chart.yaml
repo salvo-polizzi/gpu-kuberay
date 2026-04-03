@@ -1,7 +1,0 @@
-apiVersion: v2
-name: ray-nfs-raycluster
-description: Deploy a RayCluster with shared NFS-backed storage (includes optional
-  in-cluster NFS server, PV/PVC, and NodePort service).
-type: application
-version: 0.1.0
-appVersion: 2.47.1
