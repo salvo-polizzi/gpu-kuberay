@@ -1,0 +1,183 @@
+nameOverride: ""
+fullnameOverride: ""
+
+workspace:
+  projectPath: /home/coder/project
+  image:
+    repository: salvo324234/vscode-ray-client
+    tag: 1.0.2
+    pullPolicy: IfNotPresent
+  port: 8080
+  bootstrap:
+    enabled: true
+    runAsUser: 0
+
+podAnnotations: {}
+podLabels: {}
+
+service:
+  type: NodePort
+  port: 8080
+  targetPort: http
+  nodePort: 30081
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: vscode-rayjob.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+
+sharedStorage:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteMany
+  size: 20Gi
+  mountPath: /shared
+  projectSubPath: project
+
+ray:
+  jobTemplatePath: /etc/rayjob/rayjob-template.yaml
+  jobNamePrefix: rayjob
+  sharedStoragePathEnvName: SHARED_STORAGE_PATH
+  sharedStoragePathValue: /shared/models
+
+rayJob:
+  apiVersion: ray.io/v1
+  submissionMode: K8sJobMode
+  shutdownAfterJobFinishes: true
+  ttlSecondsAfterFinished: 300
+  activeDeadlineSeconds: 3600
+  backoffLimit: 0
+  entrypoint: python /shared/project/entrypoint.py
+  runtimeEnv:
+    workingDir: /shared/project
+    pip:
+      - numpy
+      - pandas
+      - torch==2.4.1
+    envVars: {}
+  submitterPodTemplate:
+    image:
+      repository: rayproject/ray
+      tag: 2.47.1.aeaf41-py311-cpu
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: "500m"
+        memory: 512Mi
+  rayClusterSpec:
+    rayVersion: 2.47.1
+    enableInTreeAutoscaling: true
+    head:
+      serviceType: ClusterIP
+      image:
+        repository: rayproject/ray
+        tag: 2.47.1.aeaf41-py311-cpu
+        pullPolicy: IfNotPresent
+      rayStartParams:
+        num-cpus: "0"
+      initSharedStorage:
+        enabled: true
+        image: busybox
+        runAsUser: 0
+        command:
+          - sh
+          - -c
+        args: |
+          mkdir -p /shared/models /shared/datasets /shared/uploads /shared/checkpoints
+          chmod -R 0777 /shared
+      ports:
+        - containerPort: 6379
+          name: gcs
+          protocol: TCP
+        - containerPort: 8265
+          name: dashboard
+          protocol: TCP
+        - containerPort: 10001
+          name: client
+          protocol: TCP
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+        limits:
+          cpu: "1"
+          memory: 4Gi
+    workers:
+      cpuGroup:
+        enabled: true
+        groupName: cpu-group
+        name: ray-worker
+        replicas: 0
+        minReplicas: 1
+        maxReplicas: 2
+        image:
+          repository: rayproject/ray
+          tag: 2.47.1.aeaf41-py311-cpu
+          pullPolicy: IfNotPresent
+        rayStartParams: {}
+        resources:
+          requests:
+            cpu: "1"
+            memory: 1Gi
+          limits:
+            cpu: "1"
+            memory: 8Gi
+      gpuGroup:
+        enabled: true
+        groupName: gpu-group
+        name: ray-node
+        replicas: 1
+        minReplicas: 0
+        maxReplicas: 1
+        image:
+          repository: rayproject/ray
+          tag: 2.47.1.aeaf41-py311-gpu
+          pullPolicy: IfNotPresent
+        rayStartParams: {}
+        resources:
+          requests:
+            cpu: "1"
+            memory: 1Gi
+            nvidia.com/gpu: 1
+          limits:
+            cpu: "1"
+            memory: 8Gi
+            nvidia.com/gpu: 1
+        runtimeClassName: nvidia
+
+env: []
+# Extra PVC-backed mounts for the VS Code pod and the ephemeral RayJob cluster.
+# Example:
+# extraVolumes:
+#   - name: datasets
+#     mountPath: /data
+#     claimName: datasets-pvc
+#     readOnly: true
+#     subPath: ""
+extraVolumes: []
+nodeSelector: {}
+tolerations: []
+affinity: {}

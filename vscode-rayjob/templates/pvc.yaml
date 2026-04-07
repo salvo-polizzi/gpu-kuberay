@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vscode-rayjob.pvcName" . }}
+  labels:
+{{ include "vscode-rayjob.labels" . | nindent 4 }}
+spec:
+  accessModes:
+{{- range .Values.sharedStorage.accessModes }}
+    - {{ . | quote }}
+{{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedStorage.size | quote }}
+  storageClassName: {{ .Values.sharedStorage.storageClassName | quote }}

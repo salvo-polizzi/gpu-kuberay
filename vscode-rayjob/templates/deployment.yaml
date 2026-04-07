@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vscode-rayjob.fullname" . }}
+  labels:
+{{ include "vscode-rayjob.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+{{ include "vscode-rayjob.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "vscode-rayjob.selectorLabels" . | nindent 8 }}
+{{- with .Values.podLabels }}
+{{ toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | nindent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: {{ include "vscode-rayjob.serviceAccountName" . }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | nindent 8 }}
+{{- if .Values.workspace.bootstrap.enabled }}
+      initContainers:
+        - name: seed-workspace-project
+          image: "{{ .Values.workspace.image.repository }}:{{ .Values.workspace.image.tag }}"
+          imagePullPolicy: {{ .Values.workspace.image.pullPolicy }}
+          securityContext:
+            runAsUser: {{ .Values.workspace.bootstrap.runAsUser }}
+          command:
+            - sh
+            - -c
+          args:
+            - >
+              mkdir -p {{ printf "%s/%s" .Values.sharedStorage.mountPath .Values.sharedStorage.projectSubPath | quote }} &&
+              if [ ! -f {{ printf "%s/%s/entrypoint.py" .Values.sharedStorage.mountPath .Values.sharedStorage.projectSubPath | quote }} ]; then
+                cp -a {{ printf "%s/." .Values.workspace.projectPath | quote }} {{ printf "%s/%s/" .Values.sharedStorage.mountPath .Values.sharedStorage.projectSubPath | quote }};
+              fi
+          volumeMounts:
+            - name: shared-storage
+              mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- end }}
+      containers:
+        - name: code-server
+          image: "{{ .Values.workspace.image.repository }}:{{ .Values.workspace.image.tag }}"
+          imagePullPolicy: {{ .Values.workspace.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.workspace.port }}
+              protocol: TCP
+          env:
+            - name: {{ .Values.ray.sharedStoragePathEnvName }}
+              value: {{ .Values.ray.sharedStoragePathValue | quote }}
+            - name: WORKSPACE_PVC_NAME
+              value: {{ include "vscode-rayjob.pvcName" . | quote }}
+            - name: WORKSPACE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RAYJOB_TEMPLATE_PATH
+              value: {{ .Values.ray.jobTemplatePath | quote }}
+            - name: RAYJOB_NAME_PREFIX
+              value: {{ printf "%s-%s" .Values.ray.jobNamePrefix (include "vscode-rayjob.fullname" .) | quote }}
+{{- with .Values.env }}
+{{ toYaml . | nindent 12 }}
+{{- end }}
+          securityContext:
+{{ toYaml .Values.securityContext | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+{{ toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: shared-storage
+              mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+            - name: shared-storage
+              mountPath: {{ .Values.workspace.projectPath | quote }}
+              subPath: {{ .Values.sharedStorage.projectSubPath | quote }}
+            - name: rayjob-template
+              mountPath: {{ .Values.ray.jobTemplatePath | quote }}
+              subPath: rayjob-template.yaml
+{{- range .Values.extraVolumes }}
+            - name: {{ .name | quote }}
+              mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+              subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+              readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: {{ include "vscode-rayjob.pvcName" . | quote }}
+        - name: rayjob-template
+          configMap:
+            name: {{ include "vscode-rayjob.rayJobTemplateName" . }}
+            items:
+              - key: rayjob-template.yaml
+                path: rayjob-template.yaml
+{{- range .Values.extraVolumes }}
+        - name: {{ .name | quote }}
+          persistentVolumeClaim:
+            claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+            readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+{{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | nindent 8 }}
+{{- end }}

@@ -1,0 +1,21 @@
+VS Code workspace with RayJob template deployed.
+
+Resources:
+- Deployment: {{ include "vscode-rayjob.fullname" . }}
+- PVC: {{ include "vscode-rayjob.pvcName" . }}
+- ServiceAccount: {{ include "vscode-rayjob.serviceAccountName" . }}
+- RayJob template ConfigMap: {{ include "vscode-rayjob.rayJobTemplateName" . }}
+
+Inside the VS Code pod:
+- Template path: {{ .Values.ray.jobTemplatePath }}
+- WORKSPACE_PVC_NAME={{ include "vscode-rayjob.pvcName" . }}
+- RAYJOB_NAME_PREFIX={{ printf "%s-%s" .Values.ray.jobNamePrefix (include "vscode-rayjob.fullname" .) }}
+
+Suggested script flow:
+- export RAYJOB_NAME="${RAYJOB_NAME_PREFIX}-$(date +%s)"
+- ./submit_rayjob.sh
+
+Important:
+- The RayJob entrypoint is {{ .Values.rayJob.entrypoint }}
+- The editable project is stored on the shared PVC and mounted into the VS Code pod at {{ .Values.workspace.projectPath }}.
+- The workspace init container seeds {{ .Values.sharedStorage.mountPath }}/{{ .Values.sharedStorage.projectSubPath }} from the image only when the PVC project directory is empty.

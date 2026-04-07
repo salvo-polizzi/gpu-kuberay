@@ -1,0 +1,223 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vscode-rayjob.rayJobTemplateName" . }}
+  labels:
+{{ include "vscode-rayjob.labels" . | nindent 4 }}
+data:
+  rayjob-template.yaml: |
+    apiVersion: {{ .Values.rayJob.apiVersion }}
+    kind: RayJob
+    metadata:
+      name: ${RAYJOB_NAME}
+    spec:
+      entrypoint: {{ .Values.rayJob.entrypoint | quote }}
+      submissionMode: {{ .Values.rayJob.submissionMode | quote }}
+      shutdownAfterJobFinishes: {{ .Values.rayJob.shutdownAfterJobFinishes }}
+      ttlSecondsAfterFinished: {{ .Values.rayJob.ttlSecondsAfterFinished }}
+      activeDeadlineSeconds: {{ .Values.rayJob.activeDeadlineSeconds }}
+      backoffLimit: {{ .Values.rayJob.backoffLimit }}
+{{- if or .Values.rayJob.runtimeEnv.workingDir .Values.rayJob.runtimeEnv.pip .Values.rayJob.runtimeEnv.envVars }}
+      runtimeEnvYAML: |
+{{- if .Values.rayJob.runtimeEnv.workingDir }}
+        working_dir: {{ .Values.rayJob.runtimeEnv.workingDir | quote }}
+{{- end }}
+{{- if .Values.rayJob.runtimeEnv.pip }}
+        pip:
+{{- range .Values.rayJob.runtimeEnv.pip }}
+          - {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- if .Values.rayJob.runtimeEnv.envVars }}
+        env_vars:
+{{- range $key, $value := .Values.rayJob.runtimeEnv.envVars }}
+          {{ $key }}: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+      submitterPodTemplate:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: ray-job-submitter
+              image: "{{ .Values.rayJob.submitterPodTemplate.image.repository }}:{{ .Values.rayJob.submitterPodTemplate.image.tag }}"
+              imagePullPolicy: {{ .Values.rayJob.submitterPodTemplate.image.pullPolicy }}
+              resources:
+{{ toYaml .Values.rayJob.submitterPodTemplate.resources | nindent 16 }}
+              volumeMounts:
+                - name: shared-data
+                  mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                - name: {{ .name | quote }}
+                  mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                  subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                  readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+          volumes:
+            - name: shared-data
+              persistentVolumeClaim:
+                claimName: ${WORKSPACE_PVC_NAME}
+{{- range .Values.extraVolumes }}
+            - name: {{ .name | quote }}
+              persistentVolumeClaim:
+                claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+      rayClusterSpec:
+        rayVersion: {{ .Values.rayJob.rayClusterSpec.rayVersion | quote }}
+        enableInTreeAutoscaling: {{ .Values.rayJob.rayClusterSpec.enableInTreeAutoscaling }}
+        headGroupSpec:
+          serviceType: {{ .Values.rayJob.rayClusterSpec.head.serviceType | quote }}
+          rayStartParams:
+{{- toYaml .Values.rayJob.rayClusterSpec.head.rayStartParams | nindent 12 }}
+          template:
+            spec:
+{{- if .Values.rayJob.rayClusterSpec.head.initSharedStorage.enabled }}
+              initContainers:
+                - name: init-shared-storage
+                  image: {{ .Values.rayJob.rayClusterSpec.head.initSharedStorage.image | quote }}
+                  securityContext:
+                    runAsUser: {{ .Values.rayJob.rayClusterSpec.head.initSharedStorage.runAsUser }}
+                  command:
+{{- toYaml .Values.rayJob.rayClusterSpec.head.initSharedStorage.command | nindent 20 }}
+                  args:
+                    - {{ .Values.rayJob.rayClusterSpec.head.initSharedStorage.args | quote }}
+                  volumeMounts:
+                    - name: shared-data
+                      mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                    - name: {{ .name | quote }}
+                      mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                      subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                      readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+{{- end }}
+              containers:
+                - name: ray-head
+                  image: "{{ .Values.rayJob.rayClusterSpec.head.image.repository }}:{{ .Values.rayJob.rayClusterSpec.head.image.tag }}"
+                  imagePullPolicy: {{ .Values.rayJob.rayClusterSpec.head.image.pullPolicy }}
+                  ports:
+{{- toYaml .Values.rayJob.rayClusterSpec.head.ports | nindent 20 }}
+                  resources:
+{{- toYaml .Values.rayJob.rayClusterSpec.head.resources | nindent 20 }}
+                  volumeMounts:
+                    - name: shared-data
+                      mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                    - name: {{ .name | quote }}
+                      mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                      subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                      readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+              volumes:
+                - name: shared-data
+                  persistentVolumeClaim:
+                    claimName: ${WORKSPACE_PVC_NAME}
+{{- range .Values.extraVolumes }}
+                - name: {{ .name | quote }}
+                  persistentVolumeClaim:
+                    claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                    readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+        workerGroupSpecs:
+{{- if .Values.rayJob.rayClusterSpec.workers.cpuGroup.enabled }}
+          - groupName: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.groupName | quote }}
+            replicas: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.replicas }}
+            minReplicas: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.minReplicas }}
+            maxReplicas: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.maxReplicas }}
+            rayStartParams:
+{{- toYaml .Values.rayJob.rayClusterSpec.workers.cpuGroup.rayStartParams | nindent 14 }}
+            template:
+              spec:
+                containers:
+                  - name: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.name | quote }}
+                    image: "{{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.image.repository }}:{{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.image.tag }}"
+                    imagePullPolicy: {{ .Values.rayJob.rayClusterSpec.workers.cpuGroup.image.pullPolicy }}
+                    resources:
+{{- toYaml .Values.rayJob.rayClusterSpec.workers.cpuGroup.resources | nindent 22 }}
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                      - name: {{ .name | quote }}
+                        mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                        subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                        readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+                volumes:
+                  - name: shared-data
+                    persistentVolumeClaim:
+                      claimName: ${WORKSPACE_PVC_NAME}
+{{- range .Values.extraVolumes }}
+                  - name: {{ .name | quote }}
+                    persistentVolumeClaim:
+                      claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                      readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.rayJob.rayClusterSpec.workers.gpuGroup.enabled }}
+          - groupName: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.groupName | quote }}
+            replicas: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.replicas }}
+            minReplicas: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.minReplicas }}
+            maxReplicas: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.maxReplicas }}
+            rayStartParams:
+{{- toYaml .Values.rayJob.rayClusterSpec.workers.gpuGroup.rayStartParams | nindent 14 }}
+            template:
+              spec:
+{{- if .Values.rayJob.rayClusterSpec.workers.gpuGroup.runtimeClassName }}
+                runtimeClassName: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.runtimeClassName | quote }}
+{{- end }}
+                containers:
+                  - name: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.name | quote }}
+                    image: "{{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.image.repository }}:{{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.image.tag }}"
+                    imagePullPolicy: {{ .Values.rayJob.rayClusterSpec.workers.gpuGroup.image.pullPolicy }}
+                    resources:
+{{- toYaml .Values.rayJob.rayClusterSpec.workers.gpuGroup.resources | nindent 22 }}
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: {{ .Values.sharedStorage.mountPath | quote }}
+{{- range .Values.extraVolumes }}
+                      - name: {{ .name | quote }}
+                        mountPath: {{ .mountPath | quote }}
+{{- if hasKey . "subPath" }}
+                        subPath: {{ .subPath | quote }}
+{{- end }}
+{{- if hasKey . "readOnly" }}
+                        readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+                volumes:
+                  - name: shared-data
+                    persistentVolumeClaim:
+                      claimName: ${WORKSPACE_PVC_NAME}
+{{- range .Values.extraVolumes }}
+                  - name: {{ .name | quote }}
+                    persistentVolumeClaim:
+                      claimName: {{ .claimName | quote }}
+{{- if hasKey . "readOnly" }}
+                      readOnly: {{ .readOnly }}
+{{- end }}
+{{- end }}
+{{- end }}

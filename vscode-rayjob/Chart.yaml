@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vscode-rayjob
+description: Deploy a VS Code workspace with a PVC and a mounted RayJob template for ephemeral Ray clusters.
+type: application
+version: 0.1.0
+appVersion: "1.0.1"
